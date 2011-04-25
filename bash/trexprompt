@@ -1,0 +1,100 @@
+#!/bin/bash
+
+GIT_PS1_SHOWDIRTYSTATE=true
+GIT_BRANCH_COLOR="\[\033[38;5;155m\]\[\033[48;5;235m\]"
+PS1_EXIT_RED="\[\033[38;5;208m\]\[\033[48;5;52m\]"
+
+# === Initializing static variables ===========================================
+case $TERM in
+    xterm* | screen)
+        CORNER_TOP="\[\033(0l\033(B\]"
+        CORNER_BOTTOM="\[\033(0m\033(B\]"
+        LINE_TWO="\[\033(0qq\033(B\]"
+        ;;
+    *)
+        LINE_TWO="--"
+        ;;
+esac
+
+if [ "$PROMPT_COLOR_1" == "" ];
+then
+    PROMPT_COLOR_1="\[\033[48;5;$(($(hostname | cksum | cut -c1-3) % 56))m\]"
+fi
+
+if [ "$PROMPT_COLOR_2" == "" ];
+then
+    PROMPT_COLOR_2="\[\033[48;5;$(($(hostname | cksum | cut -c1-3) % 65))m\]"
+fi
+
+GRAY="\[\033[1;30m\]"
+LIGHT_GRAY="\[\033[0;37m\]"
+NO_COLOUR="\[\033[0m\]"
+
+type __git_ps1 > /dev/null 2>&1
+PS1_GIT_NOT_AVAILABLE=$?
+
+
+# === The actual function to create the prompt ================================
+function prompt_command
+{
+    # === first inspect the previous exit code ================================
+    # when this is not zero (=previous command exited with an error, show it
+    # in the prompt
+    local es=$?
+    local exitStatusLength=""
+    if [ $es -ne 0 ]
+    then
+        local exitStatus="${PS1_EXIT_RED} $(printf "%3d" ${es}) $NO_COLOUR$LINE_TWO"
+        exitStatusLength="       "
+    fi
+
+    history -a # write previous executed command to the history
+
+    # === use other color when user is root ===================================
+    if [ $UID -eq "0" ]; # user is root
+    then
+        PROMPT_COLOR_1="\[\033[0;41m\]"
+    fi
+
+    # === First part of the prompt ============================================
+    # this part is always present and show the basic info
+    local hostn=$(hostname -s)
+    local usern=$(whoami)
+
+    if [ ${#PWD} -gt 50 ];
+    then
+        local working_dir=${PWD:0:10}...${PWD:$((${#PWD}-37))};
+    else
+        local working_dir=$PWD
+    fi
+
+    PS1="$NO_COLOUR$CORNER_TOP$LINE_TWO[$PROMPT_COLOR_1$usern@$hostn$NO_COLOUR]$LINE_TWO[$PROMPT_COLOR_1${working_dir}$NO_COLOUR]$LINE_TWO$exitStatus"
+        
+
+    # === Second part of the prompt: git info =================================
+    if [ $COLUMNS -gt 98 ];
+    then
+        if [ $PS1_GIT_NOT_AVAILABLE = 0 ];
+        then
+            local git_branch=$(__git_ps1 '  %s  ')
+            PS1="$PS1$GIT_BRANCH_COLOR$git_branch$NO_COLOUR"
+        fi
+        PS1="$PS1${LINE_TWO}${LINE_TWO}$LIGHT_GRAY${LINE_TWO}$GRAY${LINE_TWO}$NO_COLOUR"
+    fi
+
+
+    # === Third part of the prompt, for wide screens ==========================
+    # shows the current time and load on the right side of the screen
+    if [ ${COLUMNS} -gt 128 ];
+    then
+        local fill=$(printf "%$(($COLUMNS-${#usern}-${#hostn}-${#working_dir}-${#git_branch}-${#exitStatusLength}-50))s" '')
+
+        PS1="$PS1$fill$GRAY${LINE_TWO}$LIGHT_GRAY${LINE_TWO}$NO_COLOUR${LINE_TWO}[$PROMPT_COLOR_2\t$NO_COLOUR]$LINE_TWO[$PROMPT_COLOR_2\$(temp=\$(cat /proc/loadavg) && echo \${temp%% *})$NO_COLOUR]${LINE_TWO}$LIGHT_GRAY${LINE_TWO}$GRAY${LINE_TWO}$NO_COLOUR"
+    fi
+
+    # === Last part of the prompt =============================================
+    # adds a newline and the prompt sign ($ or #)
+    PS1="$PS1\n\$ "
+}
+
+PROMPT_COMMAND=prompt_command
