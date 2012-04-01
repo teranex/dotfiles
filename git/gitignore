@@ -1,0 +1,11 @@
+*.bak
+*sites/all/modules/devel/*
+*sites/all/modules/devmodules*
+*/sites/all/modules/devmodules*
+devmodules7
+*/cache/
+tags
+tags-*
+__1-docs__
+drush_site_install
+ID

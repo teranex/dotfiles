@@ -1,0 +1,4 @@
+#!/bin/sh
+
+rm -f tags
+ctags --recurse

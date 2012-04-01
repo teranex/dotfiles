@@ -1,0 +1,3 @@
+#!/bin/sh
+
+vimdiff -f "$2" "$5" -c "map q :qa!<Enter>"
